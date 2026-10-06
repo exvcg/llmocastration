@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "llm-co-op": {
+      "command": "node",
+      "args": [
+        "C:/Users/gnex0/Desktop/llmocastration/plugin/llm-co-op-agent/dist/mcp/server.mjs"
+      ],
+      "cwd": "C:/Users/gnex0/Desktop/llmocastration",
+      "env": {
+        "LLM_CO_OP_HOST": "antigravity"
+      }
+    }
+  }
+}

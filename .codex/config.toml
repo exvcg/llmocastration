@@ -1,0 +1,6 @@
+[plugins."llm-co-op-agent@llm-co-op-local"]
+enabled = true
+
+[plugins."llm-co-op-agent@llm-co-op-local".mcp_servers.llm-co-op]
+enabled = true
+default_tools_approval_mode = "prompt"

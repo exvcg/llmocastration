@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "llm-co-op": {
+      "command": "node",
+      "cwd": ".",
+      "args": ["./dist/mcp/server.mjs"],
+      "env": {
+        "LLM_CO_OP_HOST": "codex"
+      },
+      "enabled": true,
+      "default_tools_approval_mode": "prompt",
+      "startup_timeout_sec": 15,
+      "tool_timeout_sec": 1200
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "llm-co-op-agent",
+  "description": "Coordinate planner, coder, verifier, and reviewer work across Codex and Antigravity with durable MCP handoffs."
+}

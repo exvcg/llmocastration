@@ -1,0 +1,19 @@
+{
+  "name": "llm-co-op-agent",
+  "version": "0.2.0",
+  "description": "Coordinate planner, coder, verifier, and reviewer roles across projects with durable handoffs and deterministic verification.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "LLM Co-op Agent",
+    "shortDescription": "Plan, code, verify, and review local changes.",
+    "longDescription": "LLM Co-op Agent is a personal Codex plugin that coordinates role-to-program assignments across projects, switches executors during a run, and preserves structured project-local handoffs.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Execute"],
+    "defaultPrompt": "Initialize the current project with LLM Co-op, then plan, implement, verify, and review this change."
+  },
+  "mcpServers": "./.mcp.json"
+}

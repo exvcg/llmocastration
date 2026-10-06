@@ -1,0 +1,20 @@
+{
+  "name": "llm-co-op-personal",
+  "interface": {
+    "displayName": "LLM Co-op Personal"
+  },
+  "plugins": [
+    {
+      "name": "llm-co-op-agent",
+      "source": {
+        "source": "local",
+        "path": "./.codex/plugins/llm-co-op-agent"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

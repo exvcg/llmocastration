@@ -1,71 +1,165 @@
-# llm-co-op README
+# LLM Co-op
 
-This is the README for your extension "llm-co-op". After writing up a brief description, we recommend including the following sections.
+LLM Co-op coordinates one development run across interactive programs such as
+Codex and Google Antigravity. A personal MCP plugin can serve multiple projects;
+durable run state and verification data remain isolated under each selected
+project root.
 
-## Features
+## Architecture
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+```text
+Codex plugin (host=codex) ─────────┐
+                                   ├─ LLM Co-op MCP server
+Antigravity plugin                 │    ├─ Role → executor resolution
+  (host=antigravity) ──────────────┘    ├─ Cross-program handoff
+                                        ├─ Run and task state
+                                        └─ Deterministic verification
 
-For example if there is an image subfolder under your extension project workspace:
+VSCode extension
+  └─ Future status and approval UI entry point
+```
 
-\!\[feature X\]\(images/feature-x.png\)
+Runtime data is stored under `.llm-co-op/`:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- `config.json`: executor registry, role bindings, commands, and limits
+- `task.json`: implementation tasks
+- `runs.json`: workflow state and executor switches
+- `history.json`: workflow events
 
-## Requirements
+## Build
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+```powershell
+npm install
+npm run compile
+```
 
-## Extension Settings
+For the installable personal plugin bundle, use:
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+```powershell
+npm run plugin:build
+```
 
-For example:
+The build produces:
 
-This extension contributes the following settings:
+- `dist/extension.js`
+- `dist/mcp/server.mjs`
+- `plugin/llm-co-op-agent/dist/mcp/server.mjs` (self-contained plugin runtime)
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## MCP server
 
-## Known Issues
+Every MCP client identifies itself with `LLM_CO_OP_HOST` or `--host`. A fixed
+project root is optional and remains available only for backwards-compatible
+development launches:
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+```powershell
+node dist/mcp/server.mjs `
+  --project-root C:\Users\gnex0\Desktop\llmocastration `
+  --host codex
+```
 
-## Release Notes
+The Codex personal-plugin source is located at `plugin/llm-co-op-agent`:
 
-Users appreciate release notes as you update your extension.
+- Codex manifest: `.codex-plugin/plugin.json`
+- Codex MCP config: `.mcp.json`
+- Bundled runtime: `dist/mcp/server.mjs`
+- Shared workflow instructions: `skills/agent-orchestration/SKILL.md`
 
-### 1.0.0
+The Antigravity-specific files are kept separately under
+`adapters/antigravity/llm-co-op-agent` so its root `plugin.json` cannot be
+mistaken for the portable Codex manifest.
 
-Initial release of ...
+## Personal Codex installation
 
-### 1.0.1
+The repository prepares the plugin but does not write to the user profile.
+After building:
 
-Fixed issue #.
+1. Copy `plugin/llm-co-op-agent` to
+   `%USERPROFILE%/.codex/plugins/llm-co-op-agent`.
+2. Merge `distribution/codex-personal/marketplace.json` into
+   `%USERPROFILE%/.agents/plugins/marketplace.json`.
+3. Restart Codex, open the Plugins Directory, select **LLM Co-op Personal**,
+   and install **LLM Co-op Agent**.
+4. Start a new chat in a project and let the skill call `initialize_project`
+   with that chat's absolute workspace path.
 
-### 1.1.0
+The personal plugin is visible across new chats. Every project tool accepts a
+`projectRoot`, so concurrent chats do not share mutable global project state.
 
-Added features X, Y, and Z.
+## Configuration
 
----
+Missing settings receive safe defaults. Create or edit
+`.llm-co-op/config.json` to override them. Verification commands are
+file-owned and cannot be replaced through the MCP tool.
 
-## Following extension guidelines
+```json
+{
+  "defaultExecutor": "codex",
+  "executors": {
+    "codex": {
+      "type": "interactive"
+    },
+    "antigravity": {
+      "type": "interactive"
+    }
+  },
+  "roles": {
+    "planner": {
+      "executor": "default",
+      "instructions": "목표를 구현 가능한 작업과 완료 조건으로 분해합니다."
+    },
+    "coder": {
+      "executor": "antigravity",
+      "instructions": "계획과 완료 조건에 따라 프로젝트를 수정합니다."
+    },
+    "verifier": {
+      "executor": "command",
+      "commands": [
+        "npm run check-types",
+        "npm run lint"
+      ]
+    },
+    "reviewer": {
+      "executor": "default",
+      "instructions": "목표, diff, 테스트 결과만으로 독립 검토합니다."
+    }
+  },
+  "limits": {
+    "maxIterations": 3,
+    "timeoutSeconds": 600
+  }
+}
+```
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+`default` means the role follows `defaultExecutor`. A run snapshots the role
+bindings when it starts. `switch_executor` can then reroute work without losing
+state:
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+- `currentStep`: only the active phase or selected coding task
+- `role`: the selected role for the rest of the run
+- `remainingRun`: every remaining interactive role
 
-## Working with Markdown
+The MCP server never starts Codex, Antigravity, or Gemini as a child model
+process. If the assigned executor differs from the connected host,
+`get_next_action` and the dispatch tools return `requiresHandoff` plus a durable
+checkpoint. Open the target program and continue the same `runId` there.
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+## Agent workflow
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+1. `initialize_project(projectRoot)` creates missing project-local defaults.
+2. `start_run(projectRoot, ...)` snapshots executor assignments.
+3. `get_next_action` resolves the active role and assigned executor.
+4. If `requiresHandoff` is true, continue the same `runId` and `projectRoot` in
+   `targetExecutor`.
+5. `dispatch_role` prepares local Planner or Reviewer work.
+6. `save_plan` records Planner output.
+7. `dispatch_coder` claims a task only on the assigned executor.
+8. The host edits files and calls `submit_coder_result`.
+9. `run_verification` executes configured commands.
+10. `submit_review`, then `retry_run` or `complete_run`.
 
-## For more information
+The server rejects plan, coder, and review submissions from a host that does not
+own the corresponding role. Mutating MCP tools still use each client's approval
+policy.
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Legacy model-based config and run records are migrated in memory: `gemini` and
+`gemini-cli` assignments become `antigravity` executor assignments when read.

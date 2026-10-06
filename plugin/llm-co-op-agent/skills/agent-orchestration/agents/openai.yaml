@@ -1,0 +1,4 @@
+interface:
+  display_name: "LLM Co-op Agent"
+  short_description: "Plan, implement, verify, and review project changes"
+  default_prompt: "Use the LLM Co-op workflow to plan, implement, verify, and review this project change."
